@@ -4,7 +4,6 @@
 #include <shellapi.h>
 #include <iostream>
 
-// Fungsi untuk memeriksa apakah aplikasi tertentu sedang berjalan
 bool IsProcessRunning(const wchar_t* processName) {
     PROCESSENTRY32 pe32;
     HANDLE hProcessSnap;
@@ -27,7 +26,6 @@ bool IsProcessRunning(const wchar_t* processName) {
     return false;
 }
 
-// Fungsi untuk menangguhkan (suspend) semua thread dalam sebuah proses
 void SuspendAllThreads(DWORD processID) {
     HANDLE hThreadSnap;
     THREADENTRY32 te32;
@@ -37,7 +35,6 @@ void SuspendAllThreads(DWORD processID) {
 
     te32.dwSize = sizeof(THREADENTRY32);
 
-    // Iterasi semua thread yang ada di sistem
     if (Thread32First(hThreadSnap, &te32)) {
         do {
             if (te32.th32OwnerProcessID == processID) {
@@ -53,9 +50,7 @@ void SuspendAllThreads(DWORD processID) {
     CloseHandle(hThreadSnap);
 }
 
-// Fungsi untuk mendeteksi berbagai aplikasi reverse engineering dan Task Manager
 void TerminateLostSagaIfReverseEngAppsDetected() {
-    // Daftar aplikasi reverse engineering yang harus dideteksi
     const wchar_t* reverseEngApps[] = {
         L"Taskmgr.exe",   // Task Manager
         L"cheatengine-x86_64-SSE4-AVX2.exe",   // Cheat Engine x64
@@ -70,7 +65,7 @@ void TerminateLostSagaIfReverseEngAppsDetected() {
         L"ProcessHacker.exe"     // Process Hacker
     };
 
-    // Memeriksa apakah aplikasi reverse engineering atau Task Manager sedang berjalan
+
     for (const wchar_t* appName : reverseEngApps) {
         if (IsProcessRunning(appName)) {
             PROCESSENTRY32 pe32;
@@ -86,10 +81,8 @@ void TerminateLostSagaIfReverseEngAppsDetected() {
                     if (_wcsicmp(pe32.szExeFile, L"lostsaga.exe") == 0) {
                         HANDLE hProcess = OpenProcess(PROCESS_SUSPEND_RESUME | PROCESS_TERMINATE, FALSE, pe32.th32ProcessID);
                         if (hProcess != NULL) {
-                            // Menangguhkan seluruh thread dalam proses lostsaga.exe
                             SuspendAllThreads(pe32.th32ProcessID);
 
-                            // Menampilkan notifikasi warning bahwa aplikasi reverse engineering terdeteksi
                             int result = MessageBox(NULL, L"Thread Detection!!",
                                 L"Astra Vortex", MB_OK | MB_ICONWARNING);
 
@@ -105,16 +98,15 @@ void TerminateLostSagaIfReverseEngAppsDetected() {
             }
 
             CloseHandle(hProcessSnap);
-            return;  // Jika salah satu aplikasi terdeteksi, hentikan pemeriksaan lebih lanjut
+            return;
         }
     }
 }
 
-// Thread untuk memantau aplikasi reverse engineering
 DWORD WINAPI MonitorReverseEngApps(LPVOID lpParam) {
     while (true) {
         TerminateLostSagaIfReverseEngAppsDetected();
-        Sleep(1000); // Cek setiap detik
+        Sleep(1000);
     }
     return 0;
 }
@@ -126,7 +118,6 @@ BOOL APIENTRY DllMain(HMODULE hModule,
     switch (ul_reason_for_call)
     {
     case DLL_PROCESS_ATTACH:
-        // Membuat thread untuk memonitor aplikasi reverse engineering
         CreateThread(NULL, 0, MonitorReverseEngApps, NULL, 0, NULL);
         break;
     case DLL_PROCESS_DETACH:
